@@ -2,6 +2,7 @@ FROM continuumio/miniconda3:4.8.2@sha256:456e3196bf3ffb13fee7c9216db4b18b5e6f4d3
 
 # Configure the container's behavior
 ENV DEBIAN_FRONTEND=noninteractive
+ENV PYTHONUNBUFFERED=1
 ENV PYTHONDONTWRITEBYTECODE=1
 ENV PIP_NO_CACHE_DIR=off
 
@@ -71,7 +72,6 @@ ENV USER_HOME=/home/${USER_NAME}
 RUN set -xeu; \
     groupadd -g ${GROUP_ID} ${USER_NAME}; \
     useradd -u ${USER_ID} -g ${GROUP_ID} -m -s /bin/bash ${USER_NAME}; \
-    usermod -a -G users ${USER_NAME}; \
     echo "Creating user ${USER_NAME}: OK";
 
 # Fix stupid conda permission errors
