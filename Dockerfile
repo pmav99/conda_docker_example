@@ -84,20 +84,18 @@ RUN wget https://repo.anaconda.com/miniconda/Miniconda3-py37_4.8.3-Linux-x86_64.
     chmod +x /tmp/miniconda.sh; \
     mkdir /opt/conda; \
     chown -R "${USER_ID}":"${GROUP_ID}" /opt/conda; \
-    gosu "${USER_NAME}" /bin/bash /tmp/miniconda.sh -b -p /opt/conda; \
+    gosu "${USER_NAME}" /bin/bash /tmp/miniconda.sh -b -f -p /opt/conda; \
     rm -rf /tmp/miniconda.sh; \
     gosu "${USER_NAME}" /opt/conda/bin/conda clean -tipsy; \
     ln -s /opt/conda/etc/profile.d/conda.sh /etc/profile.d/conda.sh; \
-    echo "source /opt/conda/etc/profile.d/conda.sh" | gosu "${USER_NAME}" tee -a "$USER_HOME}"/.bashrc; \
-    echo "conda activate base"                      | gosu "${USER_NAME}" tee -a "$USER_HOME}"/.bashrc; \
+    echo "source /opt/conda/etc/profile.d/conda.sh" | gosu "${USER_NAME}" tee -a "${USER_HOME}"/.bashrc; \
+    echo "conda activate base"                      | gosu "${USER_NAME}" tee -a "${USER_HOME}"/.bashrc; \
     find /opt/conda/ -follow -type f -name '*.a' -delete; \
     find /opt/conda/ -follow -type f -name '*.js.map' -delete; \
     /opt/conda/bin/conda clean -afy; \
     echo 'Conda setup: OK'
 
-# Fix stupid conda permission errors
-#RUN chown -R "${USER_ID}":"${GROUP_ID}" /opt/conda; \
-    #echo 'Fix conda permissions: OK'
+ENV PATH=/opt/conda/bin:"${PATH}"
 
 # Setup conda env (as the normal user; no need for root here)
 COPY environment.yml /tmp/environment.yml
