@@ -1,4 +1,4 @@
-FROM continuumio/miniconda3:4.8.2@sha256:456e3196bf3ffb13fee7c9216db4b18b5e6f4d37090b31df3e0309926e98cfe2
+FROM debian:10.4@sha256:aaaaf56b44807c64d294e6c8059b479f35350b454492398225034174808d1726
 
 # redsymbol.net/articles/unofficial-bash-strict-mode/
 SHELL ["/bin/bash", "-xeuo", "pipefail", "-c"]
@@ -42,26 +42,33 @@ RUN apt update; \
     rm -rf /var/lib/apt/lists/*; \
     echo 'Setting timezone: OK';
 
-# Install tini
-ENV TINI_VERSION v0.19.0
-ADD https://github.com/krallin/tini/releases/download/${TINI_VERSION}/tini /usr/bin/tini
-RUN chmod +x /usr/bin/tini
 
 # Install gosu (and anything else you need from the apt repository)
 RUN apt update; \
     apt install -yq \
+        bzip2 \
+        ca-certificates \
+        git \
         gosu \
         procps \
+        wget \
+        file \
     ; \
     apt autoremove -y; \
     rm -rf /var/lib/apt/lists/*; \
     echo 'Installation of apt dependencies: OK';
 
+# Install tini
+ENV TINI_VERSION v0.19.0
+RUN wget https://github.com/krallin/tini/releases/download/${TINI_VERSION}/tini -O /usr/bin/tini; \
+    chmod +x /usr/bin/tini; \
+    echo 'tini installation: OK'
+
 # Create a normal user
 # We will use this one to run the script
-ARG USER_NAME=amigo
-ARG USER_ID=1000
-ARG GROUP_ID=1000
+ARG USER_NAME
+ARG USER_ID
+ARG GROUP_ID
 
 ENV USER_NAME=${USER_NAME}
 ENV USER_ID=${USER_ID}
@@ -71,6 +78,22 @@ ENV USER_HOME=/home/${USER_NAME}
 RUN groupadd -g ${GROUP_ID} ${USER_NAME}; \
     useradd -u ${USER_ID} -g ${GROUP_ID} -m -s /bin/bash ${USER_NAME}; \
     echo "Creating user ${USER_NAME}: OK";
+ \
+RUN wget https://repo.anaconda.com/miniconda/Miniconda3-py37_4.8.3-Linux-x86_64.sh -O /tmp/miniconda.sh; \
+    echo 751786b92c00b1aeae3f017b781018df /tmp/miniconda.sh | md5sum --check - ; \
+    chmod +x /tmp/miniconda.sh; \
+    mkdir /opt/conda; \
+    chown -R "${USER_ID}":"${GROUP_ID}" /opt/conda; \
+    gosu "${USER_NAME}" /bin/bash /tmp/miniconda.sh -b -p /opt/conda; \
+    rm -rf /tmp/miniconda.sh; \
+    gosu "${USER_NAME}" /opt/conda/bin/conda clean -tipsy; \
+    ln -s /opt/conda/etc/profile.d/conda.sh /etc/profile.d/conda.sh; \
+    echo "source /opt/conda/etc/profile.d/conda.sh" | gosu "${USER_NAME}" tee -a "$USER_HOME}"/.bashrc; \
+    echo "conda activate base"                      | gosu "${USER_NAME}" tee -a "$USER_HOME}"/.bashrc; \
+    find /opt/conda/ -follow -type f -name '*.a' -delete; \
+    find /opt/conda/ -follow -type f -name '*.js.map' -delete; \
+    /opt/conda/bin/conda clean -afy; \
+    echo 'Conda setup: OK'
 
 # Fix stupid conda permission errors
 #RUN chown -R "${USER_ID}":"${GROUP_ID}" /opt/conda; \
