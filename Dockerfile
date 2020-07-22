@@ -1,5 +1,8 @@
 FROM continuumio/miniconda3:4.8.2@sha256:456e3196bf3ffb13fee7c9216db4b18b5e6f4d37090b31df3e0309926e98cfe2
 
+# redsymbol.net/articles/unofficial-bash-strict-mode/
+SHELL ["/bin/bash", "-xeuo", "pipefail", "-c"]
+
 # Configure the container's behavior
 ENV DEBIAN_FRONTEND=noninteractive
 ENV PYTHONUNBUFFERED=1
@@ -7,8 +10,7 @@ ENV PYTHONDONTWRITEBYTECODE=1
 ENV PIP_NO_CACHE_DIR=off
 
 # Configure apt
-RUN set -xeu; \
-    echo 'APT::Install-Recommends "false";' | tee -a /etc/apt/apt.conf.d/99-install-suggests-recommends; \
+RUN echo 'APT::Install-Recommends "false";' | tee -a /etc/apt/apt.conf.d/99-install-suggests-recommends; \
     echo 'APT::Install-Suggests "false";' | tee -a /etc/apt/apt.conf.d/99-install-suggests-recommends; \
     echo 'Configuring apt: OK';
 
@@ -16,8 +18,7 @@ RUN set -xeu; \
 ENV LANG=en_US.UTF-8 \
     LC_ALL=en_US.UTF-8 \
     LANGUAGE=en_US:en
-RUN set -xeu; \
-    apt update; \
+RUN apt update; \
     apt upgrade -yq; \
     apt install -yq locales; \
     sed -i -e "s/# ${LANG} UTF-8/${LANG} UTF-8/" /etc/locale.gen; \
@@ -31,8 +32,7 @@ RUN set -xeu; \
 # Setup the timezone
 # ENV TZ=Etc/UTC
 ENV TZ=Europe/Rome
-RUN set -xeu; \
-    apt update; \
+RUN apt update; \
     apt install -yq tzdata; \
     ln -snf /usr/share/zoneinfo/"${TZ}" /etc/localtime; \
     echo "${TZ}" | tee /etc/timezone; \
@@ -48,8 +48,7 @@ ADD https://github.com/krallin/tini/releases/download/${TINI_VERSION}/tini /usr/
 RUN chmod +x /usr/bin/tini
 
 # Install gosu (and anything else you need from the apt repository)
-RUN set -xeu; \
-    apt update; \
+RUN apt update; \
     apt install -yq \
         gosu \
         procps \
@@ -69,15 +68,13 @@ ENV USER_ID=${USER_ID}
 ENV GROUP_ID=${GROUP_ID}
 ENV USER_HOME=/home/${USER_NAME}
 
-RUN set -xeu; \
-    groupadd -g ${GROUP_ID} ${USER_NAME}; \
+RUN groupadd -g ${GROUP_ID} ${USER_NAME}; \
     useradd -u ${USER_ID} -g ${GROUP_ID} -m -s /bin/bash ${USER_NAME}; \
     echo "Creating user ${USER_NAME}: OK";
 
 # Fix stupid conda permission errors
-RUN set -xeu; \
-    chown -R "${USER_ID}":"${GROUP_ID}" /opt/conda; \
-    echo 'Fix conda permissions: OK'
+#RUN chown -R "${USER_ID}":"${GROUP_ID}" /opt/conda; \
+    #echo 'Fix conda permissions: OK'
 
 # Setup conda env (as the normal user; no need for root here)
 COPY environment.yml /tmp/environment.yml
